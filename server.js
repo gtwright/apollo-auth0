@@ -1,11 +1,15 @@
 const express = require('express')
-const { ApolloServer, gql } = require('apollo-server')
-const { registerServer } = require('apollo-server-express')
-const jwt = require('express-jwt')
+const bodyParser = require('body-parser')
 const cors = require('cors')
+const { graphqlExpress } = require('apollo-server-express')
+const schema = require('./data/schema')
+const jwt = require('express-jwt')
 var jwks = require('jwks-rsa')
 require('dotenv').config()
 
+const PORT = 4000
+
+// create our express app
 const app = express()
 
 // enable CORS
@@ -19,44 +23,25 @@ const auth = jwt({
     jwksRequestsPerMinute: 5,
     jwksUri: `${process.env.AUTH0_ISSUER}.well-known/jwks.json`
   }),
-  credentialsRequired: true,
+  credentialsRequired: false,
   // audience: process.env.AUTH0_AUDIENCE,
   issuer: process.env.AUTH0_ISSUER,
   algorithms: ['RS256']
 })
 
-const typeDefs = gql`
-  type Query {
-    hello: String,
-    helloUser: String
-  }
-`;
-
-const resolvers = {
-  Query: {
-    hello: () => 'Hello world!',
-    helloUser (root, args, context, info) {
-      console.log("resolver")
-      return `Hello`
+// graphql endpoint
+app.use(
+  '/api',
+  bodyParser.json(),
+  auth,
+  graphqlExpress(req => ({
+    schema,
+    context: {
+      user: req.user
     }
-  },
-}
+  }))
+)
 
-app.use(auth, function(res,req,next){
-  console.log("auth middle")
-  next()
-})
-
-const server = new ApolloServer((req, typeDefs, resolvers)=>({
-  typeDefs,
-  resolvers
-}));
-
-registerServer({ server, app })
-
-
-
-// normal ApolloServer listen call but url will contain /graphql
-server.listen().then(({ url }) => {
-  console.log(`🚀 Server ready at ${url}`)
+app.listen(PORT, () => {
+  console.log(`The GraphQL server is running on http://localhost:${PORT}/api`)
 })

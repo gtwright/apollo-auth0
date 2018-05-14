@@ -67,8 +67,15 @@ const auth = jwt({
   algorithms: ['RS256']
 })
 
+const errorHandler = (err, req, res, next) => {
+  //Log all errors and continue
+  //Need to catch expired tokens
+  console.log(err.name+": "+err.message)
+  return next()
+}
+
 // add authentication middleware
-app.use(auth)
+app.use(auth, errorHandler)
 
 // get roles for user...to be changed later
 function lookupRolesForUser(user){
